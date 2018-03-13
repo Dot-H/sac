@@ -1,0 +1,12 @@
+[ ] Relink uptaded object file
+    [ ] build object file as shared library
+    [ ] Inject dlopen & dlsym
+        [ ] Use an absolute path to avoid ldso /etc/ld.so.cache
+    [ ] Find the offset of the next line in the updated code
+    [ ] Jump to it
+
+[ ] Get object file from current source code.
+    [ ] With CMAKE_EXPORT_COMPILE_COMMANDS
+    [ ] Without
+
+[ ] Link the procedure to save event in vim
