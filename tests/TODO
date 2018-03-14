@@ -1,0 +1,2 @@
+[ ] Test for global global variables in file due to the
+    fact that object are always loaded instantly
