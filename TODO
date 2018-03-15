@@ -1,5 +1,6 @@
 [ ] Relink uptaded object file
     [ ] build object file as shared library
+    [ ] Check build_id
     [ ] Inject dlopen & dlsym
         [ ] Use an absolute path to avoid ldso /etc/ld.so.cache
     [ ] Find the offset of the next line in the updated code
