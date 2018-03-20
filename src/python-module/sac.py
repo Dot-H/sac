@@ -6,66 +6,84 @@ import threading
 from pprint import pprint
 import copy
 import sys
- 
+
 sac = None
-open_shared_code = b'\x48\x29\xf4\xcc\x49\x89\xf9\x48\x89\xe7\x48\x31\xf6\x48\xff\xc6\x41\xff\xd1\xcc'
+open_shared_code = b'\x56\xff\xd2\xcc\x41\x59\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\xcc'
 
-def open_shared(dlopen_addr, inject_addr, inferior, frame, lib_path):
+def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
+    gdb.write("Restoring inferior's state...\n")
+    #FIXME generic way
+    write_regs(sv_regs, ["rax",
+            "rax",
+            "rbx",
+            "rcx",
+            "rdx",
+            "rsi",
+            "rdi",
+            "rbp",
+            "rsp",
+            "r8",
+            "r9",
+            "r10",
+            "r11",
+            "r12",
+            "r13",
+            "r14",
+            "r15",
+            "rip",
+            "eflags"])
+    inferior.write_memory(inject_addr, sv_code)
+
+
+def open_shared(inject_addr, inferior, lib_path):
     res = True
+    lib_length = len(lib_path) + 1 # +1 for null byte
 
-    sv_regs = x86GenRegisters(frame)
+    gdb.write("Writing payload in inferor's memory...\n")
+    sv_regs = x86GenRegisters(gdb.selected_frame())
+
     inject_addr = sv_regs.rip #FIXME
-    sv_buf = inferior.read_memory(inject_addr, len(open_shared_code))
-    inferior.write_memory(inject_addr, open_shared_code)
-    pprint(sv_buf.hex())
 
+    sv_code = inferior.read_memory(inject_addr, len(open_shared_code))
+    inferior.write_memory(inject_addr, open_shared_code)
+    pprint(sv_code.hex())
+
+    gdb.write("Setting inferior's registers...\n")
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
-    new_regs.rdi = dlopen_addr
-    new_regs.rsi = len(lib_path) + 1
-    write_regs(new_regs, ["rip", "rdi", "rsi"])
+    new_regs.rdi = lib_length
+    new_regs.rsi = func_addr("__libc_dlopen_mode")
+    new_regs.rdx = func_addr("malloc")
+    write_regs(new_regs, ["rip", "rdi", "rsi", "rdx"])
 
     gdb.execute("continue")
 
-    new_regs = x86GenRegisters(frame)
-    inferior.write_memory(new_regs.rsp, lib_path + '\0')
+    gdb.write("Writing lib path...\n")
+    new_regs = x86GenRegisters(gdb.selected_frame())
+    if new_regs.rax == 0:
+        gdb.write("Failed to malloc libname\n", gdb.STDERR)
+        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        return False
+
+    inferior.write_memory(new_regs.rax, lib_path, lib_length)
 
     gdb.execute("continue")
 
-    new_regs = x86GenRegisters(frame)
+    new_regs = x86GenRegisters(gdb.selected_frame())
     if new_regs.rax == 0:
         gdb.write("failed to load library\n", gdb.STDERR)
         res = False
 
-    #FIXME generic way
-    write_regs(sv_regs, ["rax", 
-            "rax", 
-            "rbx", 
-            "rcx", 
-            "rdx", 
-            "rsi", 
-            "rdi", 
-            "rbp", 
-            "rsp", 
-            "r8", 
-            "r9", 
-            "r10", 
-            "r11", 
-            "r12", 
-            "r13", 
-            "r14", 
-            "r15", 
-            "rip", 
-            "eflags"])
-    inferior.write_memory(inject_addr, sv_buf)
-    gdb.execute("continue")
+    restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
     return res
+
 
 def write_regs(regs, to_write):
     for reg in to_write:
         cmd = "set ${0} = {1}".format(reg, hex(getattr(regs, reg)))
         pprint(cmd)
         gdb.execute(cmd)
+
 
 def dump_objfile(objfiles):
     for f in objfiles:
@@ -87,6 +105,7 @@ def dump_objfile(objfiles):
         except gdb.error:
             continue
 
+
 def func_addr(funcname):
     sym = gdb.lookup_global_symbol(funcname, gdb.SYMBOL_FUNCTIONS_DOMAIN)
     if (not sym or not sym.is_valid() or not sym.is_function):
@@ -104,6 +123,7 @@ def func_addr(funcname):
     addr = sym.value()
     pprint(hex(int(addr.address)))
     return int(addr.address)
+
 
 class x86GenRegisters:
     def __init__(self, frame=None):
@@ -148,6 +168,7 @@ class x86GenRegisters:
             self.rip    = int(frame.read_register('rip'))
             self.eflags = int(frame.read_register('eflags'))
 
+
 class SacCommand (gdb.Command):
     "Command to update the code in real time."
 
@@ -156,8 +177,6 @@ class SacCommand (gdb.Command):
                                           gdb.COMPLETE_FILENAME)
 
     def invoke(self, arg, from_tty):
-        dlopen_addr = func_addr("__libc_dlopen_mode")
-        open_shared(dlopen_addr, 0, gdb.selected_inferior(),
-                gdb.selected_frame(), "/home/doth/EPITA/lse/sac/build/test.so")
+        open_shared(0, gdb.selected_inferior(), "/home/doth/EPITA/lse/sac/build/test.so")
 
 SacCommand()

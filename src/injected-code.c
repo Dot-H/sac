@@ -2,51 +2,57 @@
 #include <stdlib.h>
 
 /**
-** \brief This function is used to be compiled injected into a traced
+** \brief This function is used to be compiled and injected into a traced
 ** process in order to make it dlopen a specified path.
-** Both arguments must be set-up by in the regs by the injecter in
-** order to create the buffer which will contains the absolute path to
-** the shared library.
-** Note that the path must be 'memset' by the injecter since it is not
-** in the tracee's memory space. In order to do that, the function
-** will send a SIGSTOP through a int 3 after the allocation on the stack.
-** When contuining, the function supposes that the buffer is correctly filled.
-** Once done, the function stores the result to %eax and SIGSTOP.
-** The injecter must then restore the registers and reset the memory space.
+** All arguments must be set-up by in the regs by the injecter following
+** the linux convention.
+*
+** The @lib_pathsize argument must include a terminating nullbyte in the count
+**
+** The int $3 are here to give back control to the injector. The first one
+** should be use to check the return value of malloc and memcpy the path of the
+** lib in it. The second one should be to restore the tracee's registers and
+** code.
+**
+** Note that the registers are supposed to be restored after this payload
 */
-int open_shared_library(uintptr_t dlopen_addr, size_t path_size)
+void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
+                        uintptr_t malloc_addr, uintptr_t free_addr)
 {
-    /* Allocate buffer of path_size and Let the injecter
-    ** setup the path in %rsp
-    */
+    /* save dlopen_addr */
     asm volatile (
-            "sub %rsi, %rsp\n\t"
-            "int $3\n\t" // 
+            "push %r10\n\t"
+            "push %rsi\n\t"
             );
 
-    /* Prepare the register to jump and put the buffer
-    ** as first argument
-    */
+    /* Call malloc */
     asm volatile (
-            "mov %rdi, %r9\n\t"
-            "mov %rsp, %rdi\n\t"
+            "callq *%rdx\n\t" // Call malloc_addr
+            "int $3\n\t" // Let injector setup the allocated buf in rax
             );
 
-    /* Put RLTD_LAZY flag as second argument.
+    /* Call __libc_dlopen_mode */
+    asm volatile (
+            "pop %r9\n\t" // Prepare jump to __libc_dlopen_mode
+            "push %rax\n\t" // Save malloc's address
+            "mov %rax, %rdi\n\t" // Put the return value of malloc
+            "movabs $1, %rsi\n\t" // Put RLTD_LAZY flag
+            "callq *%r9\n\t" // Call __libc_dlopen_mode
+            );
+
+    /* .
     ** Shorter than mov $1, %rsp
     */
     asm volatile (
-            "xor %rsi, %rsi\n\t"
-            "inc %rsi\n\t"
+            "pop %rdi\n\t" // Get back the address of the allocated buffer
+            "pop %r9\n\t" // Prepare jump to free
+            "callq *%r9\n\t" // call free
             );
 
-
-    /* Call dlopen_addr and interrupt the process to let
-    ** the injecter read the return value and clear the
-    ** registers / memory space
+    /* interrupt the process to let the injecter read the return
+    ** value and clear the registers / memory space
     */
     asm volatile (
-            "callq *%r9\n\t"
             "int $3\n\t"
             );
 
