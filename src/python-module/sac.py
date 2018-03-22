@@ -8,7 +8,8 @@ import copy
 import sys
 
 sac = None
-open_shared_code = b'\x56\xff\xd2\xcc\x41\x59\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\xcc'
+payload_open_shared = b'\x56\xff\xd2\xcc\x41\x59\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\xcc'
+payload_close_shared = b'\xff\xd6\xcc'
 
 def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
     gdb.write("Restoring inferior's state...\n")
@@ -34,8 +35,13 @@ def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
             "eflags"])
     inferior.write_memory(inject_addr, sv_code)
 
+def close_shared_lib(handle
 
-def open_shared(inject_addr, inferior, lib_path):
+
+def open_shared_lib(inject_addr, inferior, lib_path):
+    if (is_lib_present(lib_path)):
+        close_shared_lib(lib_path)
+
     res = True
     lib_length = len(lib_path) + 1 # +1 for null byte
 
@@ -44,8 +50,8 @@ def open_shared(inject_addr, inferior, lib_path):
 
     inject_addr = sv_regs.rip #FIXME
 
-    sv_code = inferior.read_memory(inject_addr, len(open_shared_code))
-    inferior.write_memory(inject_addr, open_shared_code)
+    sv_code = inferior.read_memory(inject_addr, len(payload_open_shared))
+    inferior.write_memory(inject_addr, payload_open_shared)
     pprint(sv_code.hex())
 
     gdb.write("Setting inferior's registers...\n")
@@ -177,6 +183,6 @@ class SacCommand (gdb.Command):
                                           gdb.COMPLETE_FILENAME)
 
     def invoke(self, arg, from_tty):
-        open_shared(0, gdb.selected_inferior(), "/home/doth/EPITA/lse/sac/build/test.so")
+        open_shared_lib(0, gdb.selected_inferior(), "/home/doth/EPITA/lse/sac/build/test.so")
 
 SacCommand()

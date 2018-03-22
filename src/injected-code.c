@@ -57,5 +57,21 @@ void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
             );
 
     // Do not need a leave since the registers will be reset
-    // Find compiler builtin to suppress the default retq
+}
+
+void close_shared_library(uintptr_t handle, uintptr_t dlclose_addr)
+{
+    /* We suppose that handle is in %rdi */
+    asm volatile (
+            "callq *%rsi\n\t" // Call __libc_dlclose
+            );
+
+    /* interrupt the process to let the injecter read the return
+    ** value and clear the registers / memory space
+    */
+    asm volatile (
+            "int $3\n\t"
+            );
+
+    // Do not need a leave since the registers will be reset
 }

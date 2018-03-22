@@ -13,7 +13,6 @@ int foo(int arg)
 int main(void)
 {
     empty();
-    printf("toto\n");
     foo(3);
     return 0;
 }
