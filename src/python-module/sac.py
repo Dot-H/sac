@@ -3,13 +3,16 @@
 import gdb
 import socket
 import threading
+from ctypes import *
 from pprint import pprint
 import copy
 import sys
+import os
 
 sac = None
 payload_open_shared = b'\x56\xff\xd2\xcc\x41\x59\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\xcc'
 payload_close_shared = b'\xff\xd6\xcc'
+import sys
 
 def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
     gdb.write("Restoring inferior's state...\n")
@@ -35,12 +38,36 @@ def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
             "eflags"])
     inferior.write_memory(inject_addr, sv_code)
 
-def close_shared_lib(handle
+def close_shared_lib(inject_addr, inferior, handle):
+    sv_regs = x86GenRegisters(gdb.selected_frame())
+    inject_addr = sv_regs.rip #FIXME
 
+    sv_code = inferior.read_memory(inject_addr, len(payload_close_shared))
+    inferior.write_memory(inject_addr, payload_close_shared)
+
+    new_regs = copy.copy(sv_regs)
+    new_regs.rip = inject_addr
+    new_regs.rdi = handle
+    new_regs.rsi = func_addr("__libc_dlclose")
+    write_regs(new_regs, ["rip", "rdi", "rsi"])
+
+    gdb.execute("continue")
+
+    new_regs = x86GenRegisters(gdb.selected_frame())
+    pprint(new_regs.rax)
+
+    restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+
+def get_link_map():
+    cli_out = gdb.execute("p *(long *)((char *)&_r_debug + 8)", False, True)
+    addr = int(cli_out.split(' ')[-1])
+    
+    
 
 def open_shared_lib(inject_addr, inferior, lib_path):
-    if (is_lib_present(lib_path)):
-        close_shared_lib(lib_path)
+#    if (is_lib_present(lib_path)):
+#       gdb.write("Closing the old version...\n")
+#       close_shared_lib(lib_path)
 
     res = True
     lib_length = len(lib_path) + 1 # +1 for null byte
@@ -52,7 +79,6 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
     sv_code = inferior.read_memory(inject_addr, len(payload_open_shared))
     inferior.write_memory(inject_addr, payload_open_shared)
-    pprint(sv_code.hex())
 
     gdb.write("Setting inferior's registers...\n")
     new_regs = copy.copy(sv_regs)
@@ -80,6 +106,7 @@ def open_shared_lib(inject_addr, inferior, lib_path):
         gdb.write("failed to load library\n", gdb.STDERR)
         res = False
 
+    pprint(hex(new_regs.rax))
     restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
     return res
 
@@ -129,6 +156,14 @@ def func_addr(funcname):
     addr = sym.value()
     pprint(hex(int(addr.address)))
     return int(addr.address)
+
+
+class LinkMap(Structure):
+    _fields_= [("l_addr", c_uint64),
+               ("l_name", POINTER(c_char)),
+               ("l_ld", c_void_p),
+               ("l_prev", c_void_p),
+               ("l_next", c_void_p)]
 
 
 class x86GenRegisters:
@@ -183,6 +218,8 @@ class SacCommand (gdb.Command):
                                           gdb.COMPLETE_FILENAME)
 
     def invoke(self, arg, from_tty):
+        sizeof(LinkMap)
         open_shared_lib(0, gdb.selected_inferior(), "/home/doth/EPITA/lse/sac/build/test.so")
+        get_r_debug()
 
 SacCommand()
