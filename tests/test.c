@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+int toto = 0;
+static int tata = 3;
+
 static inline void empty(void)
 {
 }
@@ -14,5 +17,6 @@ int main(void)
 {
     empty();
     foo(3);
+    tata = 4;
     return 0;
 }
