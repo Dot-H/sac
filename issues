@@ -1,0 +1,6 @@
+_DYNAMIC and others global variables
+
+functions introduced in an update:
+    If a function has been introduced through an update, it
+    means that it will be closed when updating a second time
+    the file. So a patch of the function cannot be done.

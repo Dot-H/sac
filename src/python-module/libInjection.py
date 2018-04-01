@@ -16,7 +16,7 @@ def close_shared_lib(inject_addr, inferior, handle):
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = handle
-    new_regs.rsi = func_addr("__libc_dlclose")
+    new_regs.rsi = sym_addr("__libc_dlclose", gdb.SYMBOL_FUNCTION_DOMAIN)
     write_regs(new_regs, ["rip", "rdi", "rsi"])
 
     gdb.execute("continue")
@@ -28,20 +28,20 @@ def close_shared_lib(inject_addr, inferior, handle):
 
 
 def open_shared_lib(inject_addr, inferior, lib_path):
-    lnk_map = get_link_map()
+    lnk_map = get_linkmap()
 
     prv = lnk_map # The first one is a sentinel, it cannot be returned
-    res = None
+    handle = None
     for lib in lnk_map:
         if lib.get_name() == lib_path:
-            res = lib
+            handle = lib
         prv = lib
 
-    if res:
+    if handle:
         gdb.write("Closing the old version...\n")
         close_shared_lib(0, inferior, prv.l_next)
 
-    res = True
+    handle = None
     lib_length = len(lib_path) + 1 # +1 for null byte
 
     gdb.write("Writing payload in inferor's memory...\n")
@@ -56,15 +56,15 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = lib_length
-    new_regs.rsi = func_addr("__libc_dlopen_mode")
+    new_regs.rsi = sym_addr("__libc_dlopen_mode", gdb.SYMBOL_FUNCTION_DOMAIN)
     if not new_regs.rsi:
-        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-        return False
+        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        return None
 
-    new_regs.rdx = func_addr("malloc")
+    new_regs.rdx = sym_addr("malloc", gdb.SYMBOL_FUNCTION_DOMAIN)
     if not new_regs.rdx:
-        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-        return False
+        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        return None
 
     write_regs(new_regs, ["rip", "rdi", "rsi", "rdx"])
 
@@ -74,18 +74,19 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     new_regs = x86GenRegisters(gdb.selected_frame())
     if not new_regs.rax:
         gdb.write("Failed to malloc libname\n", gdb.STDERR)
-        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-        return False
+        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        return None
 
     inferior.write_memory(new_regs.rax, lib_path, lib_length)
 
     gdb.execute("continue")
 
     new_regs = x86GenRegisters(gdb.selected_frame())
-    if not new_regs.rax:
+    handle = new_regs.rax
+    if not handle:
         gdb.write("failed to load library\n", gdb.STDERR)
-        res = False
+        return None
 
     pprint("return value: {0}".format(hex(new_regs.rax)))
     restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-    return res
+    return handle

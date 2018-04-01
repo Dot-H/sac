@@ -1,12 +1,8 @@
 #!/usr/bin/python
 
-from ctypes import *
-from pprint import pprint
-import copy
-import gdb
-import socket
-import threading
+import sys
 import os
+from pprint import pprint
 
 # Import module from current directory
 symbolicfile = os.path.abspath(os.path.expanduser(__file__))
@@ -15,9 +11,7 @@ sys.path.insert(0, os.path.dirname(symbolicfile))
 from linkMap import *
 from gdbUtils import *
 from libInjection import *
-
-sac = None
-
+from patchSymbols import patch_symbols
 
 class SacCommand (gdb.Command):
     "Command to update the code in real time."
@@ -33,10 +27,29 @@ class SacCommand (gdb.Command):
             gdb.write("Usage: sac /PATH/TO/LIB\n", gdb.STDERR)
             return
 
-        inf = gdb.selected_inferior()
 #        path = "/home/doth/EPITA/lse/sac/build/test.so"
         path = argv[0]
-        if not open_shared_lib(0, inf, path):
-            gdb.write("Failed to load the shared library\n", gdb.STDERR)
+        if not patch_objfile(path):
+            gdb.write("Failed to change {0}\n".format(path), gdb.STDERR)
 
-SacCommand()
+
+
+def patch_objfile(path):
+    inf = gdb.selected_inferior()
+    lib_handle = open_shared_lib(0, inf, path)
+    if not lib_handle:
+        gdb.write("Failed to load the shared library\n", gdb.STDERR)
+        return False
+
+    if not patch_symbols(path, inf, lib_handle):
+        gdb.write("Failed to patch symbols from {0}\n".format(path), gdb.STDERR)
+        if not close_shared_lib(0, inf, handle):
+            gdb.write("Failed to clean up\n", gdb.STDERR)
+
+        return False
+
+    gdb.write("Successfully updated the code\n")
+    return True
+
+if __name__ == '__main__':
+    SacCommand()

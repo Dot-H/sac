@@ -51,15 +51,20 @@ class LinkMap(Structure): # Get the current inferior at each iteration be carefu
 
         return cli_out[op_dquote + 1:cl_dquote]
 
+def get_linkmap_at(addr, inferior = gdb.selected_inferior()):
+    mv_lnk_map = inferior.read_memory(addr, sizeof(LinkMap)).cast('B')
+    lnk_map = LinkMap.from_buffer(mv_lnk_map)
 
-def get_link_map(inferior = gdb.selected_inferior()):
+    return lnk_map
+
+def get_linkmap(inferior = gdb.selected_inferior()):
     cli_out = gdb.execute("p *(long *)((char *)&_r_debug + 8)", False, True)
     addr = int(cli_out.split(' ')[-1])
     if not addr:
         gdb.write("Inferior has no link map yet\n")
         return None
 
-#Cast memory view to C - contiguous unsigned char buffer
+    # Cast memory view to C - contiguous unsigned char buffer
     mv_lnk_map = inferior.read_memory(addr, sizeof(LinkMap)).cast('B')
     lnk_map = LinkMap.from_buffer(mv_lnk_map)
 
