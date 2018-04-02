@@ -16,7 +16,7 @@ def close_shared_lib(inject_addr, inferior, handle):
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = handle
-    new_regs.rsi = sym_addr("__libc_dlclose", gdb.SYMBOL_FUNCTION_DOMAIN)
+    new_regs.rsi = sym_addr("__libc_dlclose")
     write_regs(new_regs, ["rip", "rdi", "rsi"])
 
     gdb.execute("continue")
@@ -56,12 +56,12 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = lib_length
-    new_regs.rsi = sym_addr("__libc_dlopen_mode", gdb.SYMBOL_FUNCTION_DOMAIN)
+    new_regs.rsi = sym_addr("__libc_dlopen_mode")
     if not new_regs.rsi:
         handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
-    new_regs.rdx = sym_addr("malloc", gdb.SYMBOL_FUNCTION_DOMAIN)
+    new_regs.rdx = sym_addr("malloc")
     if not new_regs.rdx:
         handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None

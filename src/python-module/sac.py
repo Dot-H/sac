@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import gdb
 import sys
 import os
 from pprint import pprint

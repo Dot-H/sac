@@ -10,13 +10,7 @@ static inline void empty(void)
 int foo(int arg)
 {
     int ret = 1 + 34 + arg;
+    printf("toto va a la plage\n");
+    tata += 1;
     return ret;
-}
-
-int main(void)
-{
-    empty();
-    foo(3);
-    tata = 4;
-    return 0;
 }

@@ -57,23 +57,17 @@ def dump_objfile(objfiles):
             continue
 
 
-def sym_addr(funcname, domain = None):
-    block = gdb.selected_frame().block()
-    if not domain:
-        sym = gdb.lookup_symbol(funcname)[0]
-    else:
-        sym = gdb.lookup_symbol(funcname, block, domain)[0]
+def sym_addr(funcname):
+    sym = gdb.lookup_symbol(funcname)[0]
 
-    if (not sym or not sym.is_valid() or not sym.is_function):
+    if (not sym):
         try:
-            pprint(funcname)
-            res = gdb.execute("p " + funcname, False, True)
+            res = gdb.execute("p '{0}'".format(funcname), False, True)
             addr_tab = res.split(' ')
             # TODO Check for function name matching
             addr = int(addr_tab[-2], 16)
             return addr
         except gdb.error:
-            gdb.write("Symbol is not a valid function\n", gdb.STDERR)
             return None
 
     addr = sym.value()
