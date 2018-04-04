@@ -1,21 +1,7 @@
-[ ] Relink uptaded object file
-    [ ] build object file as shared library
-    [ ] Check build_id
-    [ ] Write code to inject
-        [ ] Allocate space needed by the path on the stack
-        [ ] interrupt in order to be able to copy path into it
-        [ ] run __libc_dlopen_mode
-    [ ] Inject code
-        [ ] Use an absolute path to avoid ldso /etc/ld.so.cache
-        [ ] get address of __libc_dlopen_mode
-        [ ] find executable address with enough space to inject code
-        [ ] Save registers
-        [ ] Setup registers to pass the addresses as argument
-        [ ] Write the precompiled injection function
-        [ ] Jump to the injected code
-    [ ] Inject dlsym?
-    [ ] Find the offset of the next line in the updated code
-    [ ] Jump to it
+[ ] Patch function on demand
+
+[ ] Make the watcher save the needed datas
+    [ ] Which breakpoints are triggered by us
 
 [ ] Get object file from current source code.
     [ ] With CMAKE_EXPORT_COMPILE_COMMANDS

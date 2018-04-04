@@ -14,7 +14,7 @@ def read_symbols(path):
 
         for symbol in symtab.iter_symbols():
             if (symbol.entry['st_info']['type'] == 'STT_FUNC' or
-                symbol.entry['st_info']['type'] == 'STT_OBJECT'):
+               symbol.entry['st_info']['type'] == 'STT_OBJECT'):
                 ret[symbol.name] = symbol.entry
 
-    return ret        
+    return ret

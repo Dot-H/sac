@@ -62,12 +62,12 @@ def sym_addr(funcname):
 
     if (not sym):
         try:
-            res = gdb.execute("p '{0}'".format(funcname), False, True)
+            res = gdb.execute("p /x (long long){0}".format(funcname), False, True)
             addr_tab = res.split(' ')
             # TODO Check for function name matching
-            addr = int(addr_tab[-2], 16)
+            addr = int(addr_tab[-1], 16)
             return addr
-        except gdb.error:
+        except (gdb.error, ValueError):
             return None
 
     addr = sym.value()

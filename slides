@@ -1,0 +1,8 @@
+edit and continue definition
+python api description
+shared library strategy
+gdb stateless command problem
+    how it has been solved
+the famous gdb.execute()
+patch on demand
+default: multiple declaration of the same symbol

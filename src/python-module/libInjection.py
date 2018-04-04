@@ -9,6 +9,7 @@ payload_close_shared = b'\xff\xd6\xcc'
 def close_shared_lib(inject_addr, inferior, handle):
     sv_regs = x86GenRegisters(gdb.selected_frame())
     inject_addr = sv_regs.rip #FIXME
+    print("handle: 0x%lx" % handle)
 
     sv_code = inferior.read_memory(inject_addr, len(payload_close_shared))
     inferior.write_memory(inject_addr, payload_close_shared)
@@ -22,24 +23,32 @@ def close_shared_lib(inject_addr, inferior, handle):
     gdb.execute("continue")
 
     new_regs = x86GenRegisters(gdb.selected_frame())
-    pprint(new_regs.rax)
+    ret = new_regs.rax == 0
+    if not ret:
+        gdb.write("Failed to close the already present lib\n", gdb.STDERR)
+        pprint(new_regs.rax)
+
 
     restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+    return ret
 
 
 def open_shared_lib(inject_addr, inferior, lib_path):
     lnk_map = get_linkmap()
 
-    prv = lnk_map # The first one is a sentinel, it cannot be returned
+    prv = 0 # The first one is a sentinel, it cannot be returned
     handle = None
     for lib in lnk_map:
         if lib.get_name() == lib_path:
-            handle = lib
-        prv = lib
+            handle = prv
+            break
+
+        prv = lib.l_next
 
     if handle:
         gdb.write("Closing the old version...\n")
-        close_shared_lib(0, inferior, prv.l_next)
+        if not close_shared_lib(0, inferior, prv):
+            return None
 
     handle = None
     lib_length = len(lib_path) + 1 # +1 for null byte
@@ -58,12 +67,12 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     new_regs.rdi = lib_length
     new_regs.rsi = sym_addr("__libc_dlopen_mode")
     if not new_regs.rsi:
-        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
     new_regs.rdx = sym_addr("malloc")
     if not new_regs.rdx:
-        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
     write_regs(new_regs, ["rip", "rdi", "rsi", "rdx"])
@@ -72,9 +81,10 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
     gdb.write("Writing lib path...\n")
     new_regs = x86GenRegisters(gdb.selected_frame())
+
     if not new_regs.rax:
         gdb.write("Failed to malloc libname\n", gdb.STDERR)
-        handletore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
     inferior.write_memory(new_regs.rax, lib_path, lib_length)
@@ -89,4 +99,5 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
     pprint("return value: {0}".format(hex(new_regs.rax)))
     restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+    print("handle: 0x%lx" % handle)
     return handle

@@ -22,7 +22,6 @@ class SacCommand (gdb.Command):
                                           gdb.COMPLETE_FILENAME)
 
     def invoke(self, arg, from_tty):
-        pprint(sizeof(LinkMap))
         argv = gdb.string_to_argv(arg)
         if (len(argv) != 1):
             gdb.write("Usage: sac /PATH/TO/LIB\n", gdb.STDERR)
@@ -32,7 +31,6 @@ class SacCommand (gdb.Command):
         path = argv[0]
         if not patch_objfile(path):
             gdb.write("Failed to change {0}\n".format(path), gdb.STDERR)
-
 
 
 def patch_objfile(path):
@@ -49,8 +47,10 @@ def patch_objfile(path):
 
         return False
 
-    gdb.write("Successfully updated the code\n")
+    gdb.write("Code successfully updated\n")
     return True
+
+
 
 if __name__ == '__main__':
     SacCommand()
