@@ -46,7 +46,9 @@ void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
     asm volatile (
             "pop %rdi\n\t" // Get back the address of the allocated buffer
             "pop %r9\n\t" // Prepare jump to free
+            "push %rax\n\t"
             "callq *%r9\n\t" // call free
+            "pop %rax\n\t"
             );
 
     /* interrupt the process to let the injecter read the return

@@ -1,14 +1,21 @@
 import gdb
+import re
 
 from linkMap import *
 from gdbUtils import *
 
-payload_open_shared = b'\x56\xff\xd2\xcc\x41\x59\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\xcc'
+payload_open_shared = b'\x41\x52\x56\xff\xd2\xcc\x41\x59\x50\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\x5f\x41\x59\x50\x41\xff\xd1\x58\xcc'
 payload_close_shared = b'\xff\xd6\xcc'
+
+def get_injection_addr():
+    raw_stats = gdb.execute("info proc stat", False, True)
+    stats = re.split(':|\n', raw_stats)
+    addr_section_text = stats[stats.index('Start of text') + 1]
+    print("Found address %s", addr_section_text)
+    return int(addr_section_text, 16)
 
 def close_shared_lib(inject_addr, inferior, handle):
     sv_regs = x86GenRegisters(gdb.selected_frame())
-    inject_addr = sv_regs.rip #FIXME
     print("handle: 0x%lx" % handle)
 
     sv_code = inferior.read_memory(inject_addr, len(payload_close_shared))
@@ -33,7 +40,7 @@ def close_shared_lib(inject_addr, inferior, handle):
     return ret
 
 
-def open_shared_lib(inject_addr, inferior, lib_path):
+def get_handle(lib_path):
     lnk_map = get_linkmap()
 
     prv = 0 # The first one is a sentinel, it cannot be returned
@@ -45,9 +52,14 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
         prv = lib.l_next
 
+    return handle
+
+
+def open_shared_lib(inject_addr, inferior, lib_path):
+    handle = get_handle(lib_path)
     if handle:
         gdb.write("Closing the old version...\n")
-        if not close_shared_lib(0, inferior, prv):
+        if not close_shared_lib(inject_addr, inferior, handle):
             return None
 
     handle = None
@@ -55,8 +67,6 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
     gdb.write("Writing payload in inferor's memory...\n")
     sv_regs = x86GenRegisters(gdb.selected_frame())
-
-    inject_addr = sv_regs.rip #FIXME
 
     sv_code = inferior.read_memory(inject_addr, len(payload_open_shared))
     inferior.write_memory(inject_addr, payload_open_shared)
@@ -75,9 +85,14 @@ def open_shared_lib(inject_addr, inferior, lib_path):
         restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
-    write_regs(new_regs, ["rip", "rdi", "rsi", "rdx"])
+    new_regs.r10 = sym_addr("free")
+    if not new_regs.r10:
+        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
+        return None
 
+    write_regs(new_regs, ["rip", "rdi", "rsi", "rdx", "r10"])
     gdb.execute("continue")
+    
 
     gdb.write("Writing lib path...\n")
     new_regs = x86GenRegisters(gdb.selected_frame())
