@@ -4,7 +4,7 @@ import re
 from linkMap import *
 from gdbUtils import *
 
-payload_open_shared = b'\x41\x52\x56\xff\xd2\xcc\x41\x59\x50\x48\x89\xc7\x48\xbe\x01\x00\x00\x00\x00\x00\x00\x00\x41\xff\xd1\x5f\x41\x59\x50\x41\xff\xd1\x58\xcc'
+payload_open_shared = b'\x41\x52\x56\xff\xd2\xcc\x41\x59\x50\x48\x89\xc7\x48\x48\x31\xf6\x48\xff\xc6\x41\xff\xd1\x5f\x41\x59\x50\x41\xff\xd1\x58\xcc'
 payload_close_shared = b'\xff\xd6\xcc'
 
 def get_injection_addr():
@@ -92,7 +92,7 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
     write_regs(new_regs, ["rip", "rdi", "rsi", "rdx", "r10"])
     gdb.execute("continue")
-    
+
 
     gdb.write("Writing lib path...\n")
     new_regs = x86GenRegisters(gdb.selected_frame())

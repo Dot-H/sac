@@ -13,6 +13,7 @@ from linkMap import *
 from gdbUtils import *
 from libInjection import *
 from patchSymbols import *
+from build import build
 
 
 class SacCommand (gdb.Command):
@@ -22,6 +23,8 @@ class SacCommand (gdb.Command):
         super (SacCommand, self).__init__("sac", gdb.COMMAND_RUNNING,
                                           gdb.COMPLETE_FILENAME)
         self.patches = {} #Dictionnary of couple (address, Patch)
+        self.builds = {} #Dictionnary for building commands (filename, command)
+        self.default_build = ["gcc", "-c"]
 
     def invoke(self, arg, from_tty):
         argv = gdb.string_to_argv(arg)
@@ -29,7 +32,11 @@ class SacCommand (gdb.Command):
             return patch_symbol(self.patches)
 
 #        path = "/home/doth/EPITA/lse/sac/build/test.so"
-        path = argv[0]
+        path = build(argv, self.builds, self.default_build)
+        if not path:
+            gdb.write("Build failed\n", gdb.STDERR)
+            return None
+
         if not patch_objfile(path, self.patches):
             gdb.write("Failed to change {0}\n".format(path), gdb.STDERR)
 

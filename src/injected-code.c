@@ -36,7 +36,9 @@ void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
             "pop %r9\n\t" // Prepare jump to __libc_dlopen_mode
             "push %rax\n\t" // Save malloc's address
             "mov %rax, %rdi\n\t" // Put the return value of malloc
-            "movabs $1, %rsi\n\t" // Put RLTD_LAZY flag
+            "xor %rsi, %rsi\n\t"
+            "inc %rsi\n\t"
+//            "movabs $1, %rsi\n\t" // Put RLTD_LAZY flag
             "callq *%r9\n\t" // Call __libc_dlopen_mode
             );
 

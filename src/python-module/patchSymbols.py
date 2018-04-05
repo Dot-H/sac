@@ -30,10 +30,10 @@ def patch_function(symbol, new_addr):
     lookup_addr = sym_addr(symbol)
     if not lookup_addr or lookup_addr == new_addr:
         return
- 
+
     gdb.write("Patching {0}... ".format(symbol), gdb.STDERR)
 
-    inject_jumpto(lookup_addr, new_addr) 
+    inject_jumpto(lookup_addr, new_addr)
 
     gdb.write("Done\n", gdb.STDERR)
 
@@ -48,7 +48,7 @@ def patch_object(symbol, entry, new_addr):
 
     sz = entry['st_size'];
     inf = gdb.selected_inferior()
-    value = inf.read_memory(lookup_addr, sz) 
+    value = inf.read_memory(lookup_addr, sz)
     inf.write_memory(new_addr, value)
 
     gdb.write("Done\n", gdb.STDERR)
@@ -79,7 +79,7 @@ def patch_symbols(path, inf, lib_handle, patches):
             put_hook(symbol, new_addr, patches)
         else:
             patch_object(symbol, entry, new_addr)
-    
+
     return True
 
 
