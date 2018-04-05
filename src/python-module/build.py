@@ -19,7 +19,6 @@ def output_lib_path(objs):
 
     #Every build with the same files must have the same name
     objs = sorted(objs)
-    print(objs)
     for f in objs:
         basename = os.path.basename(f)
         ext_idx = extension_idx(basename)
@@ -49,7 +48,6 @@ def build_objs(paths, builds, default_build):
         f += '.o'
         cmd += ['-o', f]
         objs += [f]
-        print(cmd)
         subprocess.check_call(cmd)
 
 
@@ -59,15 +57,12 @@ def build_objs(paths, builds, default_build):
 
 def build(paths, builds, default_build, compiler = 'gcc'):
     objs = build_objs(paths, builds, default_build)
-    print("objs:", objs)
     if not objs:
         gdb.write("Failed to build object files\n", gdb.STDERR)
         return None
 
     output_lib = output_lib_path(objs)
     cmd = [compiler, '-shared', '-o', output_lib] + objs 
-    print(cmd)
-
     try:
         subprocess.check_call(cmd)
     except:

@@ -11,12 +11,10 @@ def get_injection_addr():
     raw_stats = gdb.execute("info proc stat", False, True)
     stats = re.split(':|\n', raw_stats)
     addr_section_text = stats[stats.index('Start of text') + 1]
-    print("Found address %s", addr_section_text)
     return int(addr_section_text, 16)
 
 def close_shared_lib(inject_addr, inferior, handle):
     sv_regs = x86GenRegisters(gdb.selected_frame())
-    print("handle: 0x%lx" % handle)
 
     sv_code = inferior.read_memory(inject_addr, len(payload_close_shared))
     inferior.write_memory(inject_addr, payload_close_shared)
@@ -65,7 +63,7 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     handle = None
     lib_length = len(lib_path) + 1 # +1 for null byte
 
-    gdb.write("Writing payload in inferor's memory...\n")
+    gdb.write("Writing payload in inferior's memory...\n")
     sv_regs = x86GenRegisters(gdb.selected_frame())
 
     sv_code = inferior.read_memory(inject_addr, len(payload_open_shared))
@@ -112,7 +110,5 @@ def open_shared_lib(inject_addr, inferior, lib_path):
         gdb.write("failed to load library\n", gdb.STDERR)
         return None
 
-    pprint("return value: {0}".format(hex(new_regs.rax)))
     restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-    print("handle: 0x%lx" % handle)
     return handle

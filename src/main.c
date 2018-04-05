@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
     if (build(argv[1]) != 0)
         fprintf(stderr, "Build failed\n");
 
-    printf("foo before load: %d\n", foo(0));
+    printf("before load: %d\n", foo(0));
 
     void *handle = dlopen("/home/doth/EPITA/lse/sac/build/test.so", RTLD_LAZY);
     if (!handle) {

@@ -14,6 +14,7 @@ from gdbUtils import *
 from libInjection import *
 from patchSymbols import *
 from build import build
+from buildUtils import parseSac
 
 
 class SacCommand (gdb.Command):
@@ -31,11 +32,16 @@ class SacCommand (gdb.Command):
         if not len(argv): # Called by a hook
             return patch_symbol(self.patches)
 
+        if argv[0] == "--build-file":
+            return parseSac(argv[1], self.builds)
+
 #        path = "/home/doth/EPITA/lse/sac/build/test.so"
+        gdb.write("Building... ");
         path = build(argv, self.builds, self.default_build)
         if not path:
             gdb.write("Build failed\n", gdb.STDERR)
             return None
+        gdb.write("Done\n");
 
         if not patch_objfile(path, self.patches):
             gdb.write("Failed to change {0}\n".format(path), gdb.STDERR)

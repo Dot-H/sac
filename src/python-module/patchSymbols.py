@@ -70,7 +70,6 @@ def patch_symbol(patches):
 
 def patch_symbols(path, inf, lib_handle, patches):
     symbols = read_symbols(path)
-    print(hex(lib_handle))
     lib_addr = get_linkmap_at(lib_handle).l_addr
 
     for symbol, entry in symbols.items():
