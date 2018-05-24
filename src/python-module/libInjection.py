@@ -74,17 +74,9 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     new_regs.rip = inject_addr
     new_regs.rdi = lib_length
     new_regs.rsi = sym_addr("__libc_dlopen_mode")
-    if not new_regs.rsi:
-        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-        return None
-
     new_regs.rdx = sym_addr("malloc")
-    if not new_regs.rdx:
-        restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
-        return None
-
     new_regs.r10 = sym_addr("free")
-    if not new_regs.r10:
+    if not new_regs.rsi or not new_regs.rdx or not new_regs.r10:
         restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
@@ -95,17 +87,16 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     gdb.write("Writing lib path...\n")
     new_regs = x86GenRegisters(gdb.selected_frame())
 
-    if not new_regs.rax:
+    if not new_regs.rax: # Checking return value
         gdb.write("Failed to malloc libname\n", gdb.STDERR)
         restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
     inferior.write_memory(new_regs.rax, lib_path, lib_length)
-
     gdb.execute("continue")
 
     new_regs = x86GenRegisters(gdb.selected_frame())
-    handle = new_regs.rax
+    handle = new_regs.rax # Checking return value
     if not handle:
         gdb.write("failed to load library\n", gdb.STDERR)
         return None
