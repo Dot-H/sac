@@ -28,13 +28,14 @@ The constraints are:
 
 ## Installation
 
-./PATH/TO/SAC/install.sh [GDBINIT_FILE]
+./PATH/TO/SAC/install.sh [gdbinit_file]
 
 ## Usage
 
 (gdb) sac --build-file build.sac # load an optional .sac
+
 (gdb) sac file.c ... # Edit the code from the files given in argument
 
 ## Authors
 
-Alexandre 'Dot-H' Bernard (alexandre.bernard@lse.epita.fr)
+Alexandre 'Dot-H' Bernard (alexandre.bernard@epita.fr)
