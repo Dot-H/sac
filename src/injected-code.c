@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 
 /**
 ** \brief This function is used to be compiled and injected into a traced
@@ -17,8 +18,7 @@
 ** Note that the registers are supposed to be restored after this payload
 */
 void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
-                        uintptr_t malloc_addr, uintptr_t free_addr)
-{
+                        uintptr_t malloc_addr, uintptr_t free_addr) {
     /* save dlopen_addr */
     asm volatile (
             "push %r10\n\t"
@@ -36,9 +36,7 @@ void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
             "pop %r9\n\t" // Prepare jump to __libc_dlopen_mode
             "push %rax\n\t" // Save malloc's address
             "mov %rax, %rdi\n\t" // Put the return value of malloc
-            "xor %rsi, %rsi\n\t"
-            "inc %rsi\n\t"
-//            "movabs $1, %rsi\n\t" // Put RLTD_LAZY flag
+            "mov $2, %rsi\n\t" // Put RTLD_NOW flag
             "callq *%r9\n\t" // Call __libc_dlopen_mode
             );
 
@@ -63,8 +61,7 @@ void open_shared_library(size_t lib_pathsize, uintptr_t dlopen_addr,
     // Do not need a leave since the registers will be reset
 }
 
-void close_shared_library(uintptr_t handle, uintptr_t dlclose_addr)
-{
+void close_shared_library(uintptr_t handle, uintptr_t dlclose_addr) {
     /* We suppose that handle is in %rdi */
     asm volatile (
             "callq *%rsi\n\t" // Call __libc_dlclose
@@ -78,4 +75,46 @@ void close_shared_library(uintptr_t handle, uintptr_t dlclose_addr)
             );
 
     // Do not need a leave since the registers will be reset
+}
+
+void rm_write_protect(uintptr_t addr, uintptr_t len, uintptr_t mprotect_addr) {
+    asm volatile (
+            "mov %rdx, %r9\n\t"
+            );
+
+    int prot = PROT_READ;
+    asm volatile (
+            "movl %0, %%edx\n\t"
+            : /* no output */
+            : "a"(prot)
+            );
+
+    asm volatile (
+            "call *%r9\n\t"
+            );
+
+    asm volatile (
+            "int $3\n\t"
+            );
+}
+
+void add_write_protect(uintptr_t addr, uintptr_t len, uintptr_t mprotect_addr) {
+    asm volatile (
+            "mov %rdx, %r9\n\t"
+            );
+
+    int prot = PROT_READ | PROT_WRITE;
+    asm volatile (
+            "movl %0, %%edx\n\t"
+            : /* no output */
+            : "a"(prot)
+            );
+
+    asm volatile (
+            "call *%r9\n\t"
+            );
+
+    asm volatile (
+            "int $3\n\t"
+            );
 }

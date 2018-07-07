@@ -1,13 +1,15 @@
-[ ] Patch function on demand
+The tasks are ordered by priority
 
-[ ] Make the watcher save the needed datas
-    [ ] Which breakpoints are triggered by us
+
+[ ] Link the procedure to save event in vim
+    [ ] inotify
+    [ ] Start sac notifier in command line
 
 [ ] Get object file from current source code.
     [ ] With CMAKE_EXPORT_COMPILE_COMMANDS
     [ ] Without
 
-[ ] Link the procedure to save event in vim
+[ ] Change the data structures used in Families in order to optimize the
+    space taken. There is too much pointer duplication atm.
 
-inotify
-dlmopen_doit
+[ ] Add debug and quiet option
