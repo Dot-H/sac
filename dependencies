@@ -1,2 +1,4 @@
 # pyelftools
 sudo pip install pyelftools
+# PyInotify
+sudo pip install inotify
