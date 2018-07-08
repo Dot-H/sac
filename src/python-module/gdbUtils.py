@@ -3,7 +3,7 @@ import gdb
 from pprint import pprint
 
 def restore_memory_space(sv_regs, sv_code, inject_addr, inferior):
-    gdb.write("Restoring inferior's state...\n")
+#    gdb.write("Restoring inferior's state...\n")
     #FIXME generic way
     write_regs(sv_regs, ["rax",
             "rax",

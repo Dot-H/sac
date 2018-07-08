@@ -1,4 +1,4 @@
-import pprint
+import gdb
 
 def rmWhitespaces(string):
     idx = 0
@@ -8,6 +8,7 @@ def rmWhitespaces(string):
     return string[idx:]
 
 def parseSac(filename, builds):
+    gdb.write("Parsing %s... " % filename, gdb.STDERR)
     with open(filename, "r") as f:
         lines = f.readlines()
         for line in lines:
@@ -16,5 +17,4 @@ def parseSac(filename, builds):
 
             tokens = line.split(',')
             builds[tokens[0]] = rmWhitespaces(tokens[1]).split(' ')
-
-    pprint.pprint(builds)
+    gdb.write("Done\n")

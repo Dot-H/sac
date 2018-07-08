@@ -62,13 +62,13 @@ def get_handle(lib_path):
 def open_shared_lib(inject_addr, inferior, lib_path):
     lib_length = len(lib_path) + 1 # +1 for null byte
 
-    gdb.write("Writing payload in inferior's memory...\n", gdb.STDERR)
+#    gdb.write("Writing payload in inferior's memory...\n", gdb.STDERR)
     sv_regs = x86GenRegisters(gdb.selected_frame())
 
     sv_code = inferior.read_memory(inject_addr, len(payload_open_shared))
     inferior.write_memory(inject_addr, payload_open_shared)
 
-    gdb.write("Setting inferior's registers...\n", gdb.STDERR)
+#    gdb.write("Setting inferior's registers...\n", gdb.STDERR)
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = lib_length
@@ -79,12 +79,11 @@ def open_shared_lib(inject_addr, inferior, lib_path):
         restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return None
 
-    gdb.write("inject_addr: %s\n" % hex(inject_addr))
     write_regs(new_regs, ["rip", "rdi", "rsi", "rdx", "r10"])
     gdb.execute("continue")
 
 
-    gdb.write("Writing lib path...\n", gdb.STDERR)
+#    gdb.write("Writing lib path...\n", gdb.STDERR)
     new_regs = x86GenRegisters(gdb.selected_frame())
 
     if not new_regs.rax: # Checking return value
@@ -95,6 +94,7 @@ def open_shared_lib(inject_addr, inferior, lib_path):
     inferior.write_memory(new_regs.rax, lib_path, lib_length)
     gdb.execute("continue")
 
+    gdb.write("%s\n" % lib_path)
     new_regs = x86GenRegisters(gdb.selected_frame())
     handle = new_regs.rax # Checking return value
     if not handle:
@@ -108,13 +108,13 @@ def open_shared_lib(inject_addr, inferior, lib_path):
 
 def chg_pg_prot(inject_addr, inferior, pg_addr, has_write_prot=True):
     payload = payload_add_write_protect if has_write_prot else payload_rm_write_protect
-    gdb.write("Writing payload in inferior's memory...\n", gdb.STDERR)
+#    gdb.write("Writing payload in inferior's memory...\n", gdb.STDERR)
     sv_regs = x86GenRegisters(gdb.selected_frame())
 
     sv_code = inferior.read_memory(inject_addr, len(payload))
     inferior.write_memory(inject_addr, payload)
 
-    gdb.write("Setting inferior's registers...\n", gdb.STDERR)
+#    gdb.write("Setting inferior's registers...\n", gdb.STDERR)
     new_regs = copy.copy(sv_regs)
     new_regs.rip = inject_addr
     new_regs.rdi = pg_addr
@@ -126,12 +126,12 @@ def chg_pg_prot(inject_addr, inferior, pg_addr, has_write_prot=True):
 
     write_regs(new_regs, ["rip", "rdi", "rsi", "rdx"])
 
-    gdb.write("Changing write protection...\n", gdb.STDERR)
+#    gdb.write("Changing write protection...\n", gdb.STDERR)
     gdb.execute("continue")
 
     new_regs = x86GenRegisters(gdb.selected_frame())
     if new_regs.rax == -1: # Checking return value
-        gdb.write("Failed to change write protection\n", gdb.STDERR)
+#        gdb.write("Failed to change write protection\n", gdb.STDERR)
         restore_memory_space(sv_regs, sv_code, inject_addr, inferior)
         return False
 

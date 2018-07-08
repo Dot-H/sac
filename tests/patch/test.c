@@ -1,10 +1,9 @@
 #include <stdio.h>
 
-int toto = 5;
+int toto = 10;
 
 void print_toto(void) {
     printf("addr: 0x%lx, value: %d\n", &toto, toto);
-//    toto += 1;
 }
 
 int main(int argc, char* argv[])

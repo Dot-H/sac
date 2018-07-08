@@ -42,10 +42,10 @@ class Families(object):
             return True # already present
         inf = gdb.selected_inferior()
 
-        # Patch the whole family
-        new_value = obj.get_value(inf)
-        for el in a:
-            el.set_value(inf, new_value)
+        # Update the new object with the current value of the family
+        if len(a) > 0:
+            new_value = a[0].get_value(inf)
+            obj.set_value(inf, new_value)
 
         # Insert the new object into the family and remove its write protection
         a.insert(idx, obj)
@@ -69,13 +69,14 @@ class Families(object):
 
     def try_patch(self, addr):
         srch_tmp = SymboleObject(addr, 0)
-        gdb.write("Searching corresponding object...", gdb.STDERR)
+#        gdb.write("Searching corresponding object...", gdb.STDERR)
         for symbol, family in self._families.items():
             idx = bs.bisect_left(family, srch_tmp)
             if idx == len(family) or not family[idx].is_addr_in(addr):
                 continue # Not in this family
 
-            gdb.write("Found\nPatching %s..." % symbol, gdb.STDERR)
+#            gdb.write("Found\nPatching %s..." % symbol, gdb.STDERR)
+            gdb.write("Patching family '%s'... " % symbol, gdb.STDERR)
             inf = gdb.selected_inferior()
 
             # Let faulting instruction being executed then get new value
@@ -102,7 +103,7 @@ class Families(object):
         sym_obj_list = self._locations[lib_path]
         for symbol, obj in sym_obj_list:
             if not self.remove(symbol, obj):
-                gdb.write("Failed to restore change page protection for %s"
+                gdb.write("Failed to restore page protection for %s"
                           % symbol, gdb.STDERR)
 
 

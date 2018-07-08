@@ -35,8 +35,9 @@ class SacCommand (gdb.Command):
         self.notifier.start()
 
         gdb.execute('handle SIGSEGV nopass')
-
         gdb.execute('handle %s stop nopass' % self.notifier.sigrt_str)
+        gdb.write("Please use --build-file and/or --add-files in order"
+                  " to connect\nto the source files.\n", gdb.STDERR)
 
 
     def invoke(self, arg, from_tty):
@@ -45,7 +46,10 @@ class SacCommand (gdb.Command):
             return patch_symbol(self.patches)
 
         if argv[0] == "--build-file":
-            return parseSac(argv[1], self.builds)
+            parseSac(argv[1], self.builds)
+            files = [f for f in self.builds]
+            self.add_files(files)
+            return True
 
         if argv[0] == "--add-files":
             if len(argv[1:]) == 0:
@@ -70,10 +74,10 @@ class SacCommand (gdb.Command):
         
 
     def edit(self, paths):
-        gdb.write("Building... ");
+        gdb.write("Building... ", gdb.STDERR);
         path = build(paths, self.builds, self.default_build)
         if not path:
-            gdb.write("Build failed\n", gdb.STDERR)
+            gdb.write("Failed\n", gdb.STDERR)
             return False
         gdb.write("Done\n");
 
@@ -114,39 +118,6 @@ class SacCommand (gdb.Command):
 
     def test(self):
         self.families.print()
-
-
-def patch_objfile(lib_path, patches, families):
-    inf = gdb.selected_inferior()
-    handle = get_handle(lib_path)
-    inject_addr = get_injection_addr() + 0x10
-
-    # Close old version if any
-    if handle:
-        gdb.write("Closing the old version...", gdb.STDERR)
-        families.restore_shared_lib(lib_path)
-        if not close_shared_lib(inject_addr, inf, handle):
-            gdb.write("Failed\n")
-            return False
-        gdb.write("Done\n", gdb.STDERR)
-
-    # Open the shared library
-    lib_handle = open_shared_lib(inject_addr, inf, lib_path)
-    if not lib_handle:
-        gdb.write("Failed to load the shared library\n", gdb.STDERR)
-        return False
-
-    # Patch the symbols
-    if not patch_symbols(lib_path, inf, lib_handle, patches, families):
-        gdb.write("Failed to patch symbols from {0}\n".format(lib_path), gdb.STDERR)
-        if not close_shared_lib(0, inf, handle):
-            gdb.write("Failed to clean up\n", gdb.STDERR)
-
-        return False
-
-    gdb.write("Code successfully updated\n")
-    return True
-
 
 
 def static_var(varname, value):

@@ -42,15 +42,14 @@ class Notifier(threading.Thread):
                         self.cond.wait()
 
                     if self.i_rst:
-                        print("restart")
                         self.restart_inotify()
                         self.i_rst = False
                         break
 
                 elif event:
                     (_, type_names, path, filename) = event
-                    gdb.write("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}\n".format(
-                              path, filename, type_names), gdb.STDERR)
+#        gdb.write("PATH=[{}] FILENAME=[{}] EVENT_TYPES={}\n".format(
+#                              path, filename, type_names), gdb.STDERR)
                     if type_names == ['IN_MODIFY'] or \
                        type_names == ['IN_MOVE_SELF']:
                         self.modifications.add(path)
@@ -63,6 +62,9 @@ class Notifier(threading.Thread):
 
 
     def add_watch(self, path, mask=inotify.constants.IN_ALL_EVENTS):
+        if path in self.watches:
+            return
+
         self.watches.add(path)
         self.i.add_watch(path, mask)
 

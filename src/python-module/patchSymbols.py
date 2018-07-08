@@ -3,7 +3,7 @@ import struct
 
 from readSymbols import read_symbols
 from linkMap import get_linkmap_at
-from libInjection import get_injection_addr, chg_pg_prot
+from libInjection import *
 from families import SymboleObject
 from gdbUtils import *
 
@@ -46,9 +46,9 @@ def patch_function(symbol, new_addr):
 def patch_object(lib_path, symbol, entry, new_addr, families):
     lookup_addr = sym_addr("&"+symbol)
     if not lookup_addr or lookup_addr == new_addr:
-        return
+        return True
 
-    gdb.write("Patching %s... " % symbol, gdb.STDERR)
+#    gdb.write("Patching %s... " % symbol, gdb.STDERR)
 
     sz = entry['st_size'];
     sym_obj = SymboleObject(new_addr, sz)
@@ -57,9 +57,14 @@ def patch_object(lib_path, symbol, entry, new_addr, families):
     #TODO: Try to insert it only the first time
     if not families.insert(lib_path, symbol, lookup_obj) or \
        not families.insert(lib_path, symbol, sym_obj):
+           return False
+    '''
         gdb.write("Failed\n", gdb.STDERR)
     else:
         gdb.write("Done\n", gdb.STDERR)
+    '''
+
+    return True
 
 
 
@@ -89,6 +94,41 @@ def patch_symbols(path, inf, lib_handle, patches, families):
         else:
             patch_object(lib_path, symbol, entry, new_addr, families)
 
+    return True
+
+
+
+def patch_objfile(lib_path, patches, families):
+    inf = gdb.selected_inferior()
+    handle = get_handle(lib_path)
+    inject_addr = get_injection_addr() + 0x10
+
+    # Close old version if any
+    if handle:
+        gdb.write("Closing the old version... ", gdb.STDERR)
+        families.restore_shared_lib(lib_path)
+        if not close_shared_lib(inject_addr, inf, handle):
+            gdb.write("Failed\n")
+            return False
+
+    # Open the shared library
+    gdb.write("Injecting shared library... ", gdb.STDERR)
+    lib_handle = open_shared_lib(inject_addr, inf, lib_path)
+    if not lib_handle:
+        gdb.write("Failed\n", gdb.STDERR)
+        return False
+
+    # Patch the symbols
+    gdb.write("Putting hooks... ", gdb.STDERR)
+    if not patch_symbols(lib_path, inf, lib_handle, patches, families):
+#        gdb.write("Failed to patch symbols from {0}\n".format(lib_path), gdb.STDERR)
+        gdb.write("Failed\n", gdb.STDERR)
+        if not close_shared_lib(0, inf, handle):
+            gdb.write("Failed to clean up\n", gdb.STDERR)
+
+        return False
+
+    gdb.write("Code successfully updated\n")
     return True
 
 

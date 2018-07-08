@@ -62,7 +62,7 @@ def build(paths, builds, default_build, compiler = 'gcc'):
         return None
 
     output_lib = output_lib_path(objs)
-    cmd = [compiler, '-shared', '-o', output_lib] + objs 
+    cmd = [compiler, '-rdynamic', '-shared', '-o', output_lib] + objs 
     try:
         subprocess.check_call(cmd)
     except:
