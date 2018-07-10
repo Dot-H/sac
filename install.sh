@@ -1,6 +1,6 @@
 #!/bin/sh
 
-script="source $(pwd)/src/python-module/sac.py\n\ndefine hook-stop\nsac\nend"
+script="source $(pwd)/src/python-module/sac.py"
 
 # Ask for the permission to edit the first argument
 ask_permission() {
@@ -17,7 +17,7 @@ Do you wish to continue ? (y/n) " answer
 
 # Check if the file given in argument already contains $script
 is_configured() {
-    grep "$(echo -e "$script")" "$1" 1> /dev/null 2> /dev/null \
+    grep "$(echo -e "$script")" "$1" > /dev/null 2> /dev/null \
         && echo "$gdbinit already configured" \
         && return 0
 
