@@ -42,8 +42,6 @@ class SacCommand (gdb.Command):
 
     def invoke(self, arg, from_tty):
         argv = gdb.string_to_argv(arg)
-        if not len(argv): # Called by a hook
-            return patch_symbol(self.patches)
 
         if argv[0] == "--build-file":
             parseSac(argv[1], self.builds)
@@ -107,8 +105,6 @@ class SacCommand (gdb.Command):
                 # Empty the modifications
                 while len(self.modifications) > 0:
                     f = self.modifications.pop()
-#                    self.notifier.i.remove_watch(f)
-#                    self.notifier.i.add_watch(f)
 
         self.notifier.cond.notify()
         self.notifier.cond.release()
@@ -137,5 +133,7 @@ if __name__ == '__main__':
             elif event.stop_signal == stop_handler.sac.notifier.sigrt_str:
                 stop_handler.sac.sigrt_handler()
 
+        elif isinstance(event, gdb.BreakpointEvent):
+            patch_symbol(patch_symbol(stop_handler.sac.patches))
 
     gdb.events.stop.connect(stop_handler)

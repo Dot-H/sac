@@ -69,13 +69,13 @@ def patch_object(lib_path, symbol, entry, new_addr, families):
 
 
 def patch_symbol(patches):
-    regs = x86GenRegisters(gdb.selected_frame())
-    patch = patches.get(regs.rip)
+    rip = int(gdb.selected_frame().read_register('rip'))
+    patch = patches.get(rip) if patches else None
     if not patch:
         return
 
     patch_function(patch.symbol, patch.new_addr)
-    val = patches.pop(regs.rip)
+    val = patches.pop(rip)
     val.breakpoint.delete()
     gdb.execute("continue") # Was stoped by a hook
 
